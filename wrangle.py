@@ -9,7 +9,7 @@ from pydataset import data
 from env import get_db_url
 import pandas as pd
 import numpy as np
-from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import MinMaxScaler
 
 
 def new_zillow_data():
@@ -40,18 +40,49 @@ def get_zillow_data():
     
 
 # -----------------------------prep--------------------------------
+def scale_data(train, validate, test):
+    
+    numeric_cols = ['bedroom_count','bathroom_count','calc_sqr_feet','yearbuilt','taxamount']
+    
+    train_scaled = train.copy()
+    validate_scaled = validate.copy()
+    test_scaled = test.copy()
+    
+    scaler = MinMaxScaler()
+    scaler.fit(train[numeric_cols])
+    
+    train_scaled[numeric_cols] = scaler.transform(train[numeric_cols])
+    validate_scaled[numeric_cols] = scaler.transform(validate[numeric_cols])
+    test_scaled[numeric_cols] = scaler.transform(test[numeric_cols])
+    
+    return train_scaled, validate_scaled, test_scaled
 
 
 def prep_zillow_data(df):
-    df.replace(r'^\s*$', np.nan, regex=True)
-    df.dropna()
-    df.drop_duplicates(keep= False)
-
+    
+    df = df.dropna()
+    new_columns = {
+        'bedroomcnt': 'bedroom_count',
+        'bathroomcnt': 'bathroom_count',
+        'calculatedfinishedsquarefeet': 'calc_sqr_feet',
+        'taxvaluedollarcnt': 'tax_value',
+        'fips': 'county_code'
+    }
+    df = df.rename(columns=new_columns)
     
 
     bin_cat = [0, 500000, 1000000, 1500000, 2000000, 5000000, 10000000, 25000000, 50000000, 75000000, 100000000]
-    df['value_cat'] = pd.cut(df['taxvaluedollarcnt'], bins=bin_cat, labels=False)
-      
+    df['value_cat'] = pd.cut(df['tax_value'], bins=bin_cat, labels=False)
+    df = df[
+        (df['bedroom_count'] <= 5) &
+        (df['bedroom_count'] >=3) &
+        (df['bathroom_count'] <= 4) &
+        (df['bathroom_count'] >= 2) &
+        (df['calc_sqr_feet'] <= 9000) &
+        (df['yearbuilt'] >=1900) &
+        (df['taxamount'] <=120000)
+    ]
+  
     
     train, validate, test = split_zillow_data(df)
     
