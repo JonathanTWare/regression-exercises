@@ -69,10 +69,12 @@ def prep_zillow_data(df):
         'fips': 'county_code'
     }
     df = df.rename(columns=new_columns)
+    df_encoded = pd.get_dummies(df['county_code'], prefix='is_county_code')
+    df = pd.concat([df, df_encoded], axis=1)
+
     
 
-    bin_cat = [0, 500000, 1000000, 1500000, 2000000, 5000000, 10000000, 25000000, 50000000, 75000000, 100000000]
-    df['value_cat'] = pd.cut(df['tax_value'], bins=bin_cat, labels=False)
+
     df = df[
         (df['bedroom_count'] <= 5) &
         (df['bedroom_count'] >=3) &
